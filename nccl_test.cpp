@@ -20,6 +20,15 @@ extern "C" {
         }
     }
 
+    extern int reduce_scatter(NcclComm *nc, int size, void** sendBuffs, void** recvBuffs) {
+        try {
+            nc->reduce_scatter(size, sendBuffs, recvBuffs);
+            return 0;
+        } catch(...) {
+            return -1;
+        }
+    }
+
     extern int sync(NcclComm* nc) {
         try {
             nc->sync();

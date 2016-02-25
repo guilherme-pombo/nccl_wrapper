@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 from ctypes import *
 import pycuda.driver as drv
@@ -34,17 +35,18 @@ nccllib.all_reduce.argtypes = [c_void_p,
                                POINTER(c_void_p),
                                POINTER(c_void_p)]
 
-def get_pointer(inlist, typ):
-    _ary = (typ * len(inlist))(*inlist)
-    return cast(byref(_ary), POINTER(typ))
+def int_p(_ary):
+    return cast(byref(_ary), POINTER(c_int))
+
+def void_p(_ary):
+    return cast(byref(_ary), POINTER(c_void_p))
 
 _devs = (c_int * sz)(*devlist)
 _srcs = (c_void_p * sz)(*srcs)
 _dsts = (c_void_p * sz)(*dsts)
 
-ncc = nccllib.create(c_int(ndev), cast(byref(_devs), POINTER(c_int)))
-nccllib.all_reduce(ncc, c_int(sz), cast(byref(_srcs), POINTER(c_void_p)), cast(byref(_dsts), POINTER(c_void_p)))
-
+ncc = nccllib.create(c_int(ndev), int_p(_devs))
+nccllib.all_reduce(ncc, c_int(sz), void_p(_srcs), void_p(_dsts))
 
 nccllib.sync(ncc)
 for c, i, o in zip(ctxs, inputs, outputs):

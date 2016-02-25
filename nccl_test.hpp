@@ -63,7 +63,15 @@ public:
                                     (void*) recvBuffs[i],
                                     size, ncclFloat, ncclSum, _comms[i], _strms[i]));
         }
-        printf("Initiated all reduce\n");
+    }
+
+    void reduce_scatter(int size, void** sendBuffs, void** recvBuffs) {
+        for (int i = 0; i < _ndevs; ++i) {
+            CUDACHECK(cudaSetDevice(_devcs[i]));
+            NCCLCHECK(ncclReduceScatter((const void*) sendBuffs[i],
+                                        (void*) recvBuffs[i],
+                                        size, ncclFloat, ncclSum, _comms[i], _strms[i]));
+        }
     }
 
     void sync() {
