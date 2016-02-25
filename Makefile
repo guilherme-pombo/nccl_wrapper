@@ -1,4 +1,4 @@
-SRCS := $(wildcard *.hpp)
+SRCS := $(wildcard src/*.hpp)
 CFLAGS := -Wall -Werror -O3 -std=c++11
 CC := g++
 export CUDA_ROOT:=$(patsubst %/bin/nvcc,%, $(realpath $(shell which nvcc)))
@@ -11,7 +11,7 @@ else
 endif
 LIBS := -lcuda -lcudart -lnccl $(LIBS)
 
-all: nccllib.so
+all: ncclcomm/nccllib.so
 
-nccllib.so: nccl_test.cpp $(SRCS)
+ncclcomm/nccllib.so: src/nccllib.cpp $(SRCS)
 	$(CC) -shared -o $@ -fPIC $(CFLAGS) $< $(INC) $(LDIR) $(LIBS)

@@ -1,4 +1,4 @@
-#include "nccl_test.hpp"
+#include "nccllib.hpp"
 
 extern "C" {
 

@@ -12,7 +12,7 @@ class NCCLComm(object):
     def __init__(self, devlist):
         try:
             libpath = osp.dirname(osp.realpath(__file__))
-            self.nccllib = cdll.LoadLibrary(osp.join(libpath, '..', 'nccllib.so'))
+            self.nccllib = cdll.LoadLibrary(osp.join(libpath, 'nccllib.so'))
             self.nccllib.create.restype = c_void_p
             self.nccllib.create.argtypes = [c_int, POINTER(c_int)]
             self.nccllib.kill.argtypes = [c_void_p]
