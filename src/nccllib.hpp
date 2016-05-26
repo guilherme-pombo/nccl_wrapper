@@ -27,7 +27,7 @@
 
 class NcclComm {
 public:
-    NcclComm(int nGPU, int* GPUs) {
+    NcclComm(int nGPU, int* GPUs, cudaStream_t* streams) {
         _ndevs = nGPU;
         _devcs = (int *) malloc(sizeof(int) * _ndevs);
         _strms = (cudaStream_t *) malloc(sizeof(cudaStream_t) * _ndevs);
@@ -35,56 +35,42 @@ public:
 
         for (int i = 0; i < _ndevs; ++i) {
             _devcs[i] = GPUs[i];
-            // Correct device must be set prior to each collective call.
-            CUDACHECK(cudaSetDevice(_devcs[i]));
-            CUDACHECK(cudaStreamCreate(_strms+i));
+            _strms[i] = streams[i];
         }
-        NCCLCHECK(ncclCommInitAll(_comms, _ndevs, _devcs));
+        NCCLCHECK(ncclGetUniqueId(&_comm_id));
     }
 
     virtual ~NcclComm() {
-        for (int i = 0; i < _ndevs; ++i) {
-            CUDACHECK(cudaSetDevice(_devcs[i]));
-            CUDACHECK(cudaStreamDestroy(_strms[i]));
-        }
-        for(int i = 0; i < _ndevs; ++i)
-            ncclCommDestroy(_comms[i]);
         free(_comms);
         free(_devcs);
         free(_strms);
         return;
-
     }
 
-    void all_reduce(int size, void** sendBuffs, void** recvBuffs) {
-        for (int i = 0; i < _ndevs; ++i) {
-            CUDACHECK(cudaSetDevice(_devcs[i]));
-            NCCLCHECK(ncclAllReduce((const void*) sendBuffs[i],
-                                    (void*) recvBuffs[i],
-                                    size, ncclFloat, ncclSum, _comms[i], _strms[i]));
-        }
+    void init_comm(int devIndex) {
+        NCCLCHECK(ncclCommInitRank(&_comms[devIndex], _ndevs, _comm_id, devIndex));
     }
 
-    void reduce_scatter(int size, void** sendBuffs, void** recvBuffs) {
-        for (int i = 0; i < _ndevs; ++i) {
-            CUDACHECK(cudaSetDevice(_devcs[i]));
-            NCCLCHECK(ncclReduceScatter((const void*) sendBuffs[i],
-                                        (void*) recvBuffs[i],
-                                        size, ncclFloat, ncclSum, _comms[i], _strms[i]));
-        }
+    void destroy_comm(int devIndex) {
+        ncclCommDestroy(_comms[devIndex]);
     }
 
-    void sync() {
-        for (int i = 0; i < _ndevs; ++i) {
-            CUDACHECK(cudaSetDevice(_devcs[i]));
-            CUDACHECK(cudaStreamSynchronize(_strms[i]));
-        }
+    void all_reduce(int size, void* sendBuff, void* recvBuff, int devIndex) {
+        NCCLCHECK(ncclAllReduce((const void*) sendBuff,
+                                (void*) recvBuff,
+                                size, ncclFloat, ncclSum, _comms[devIndex], _strms[devIndex]));
     }
 
+    void reduce_scatter(int size, void* sendBuff, void* recvBuff, int devIndex) {
+        NCCLCHECK(ncclReduceScatter((const void*) sendBuff,
+                                    (void*) recvBuff,
+                                    size, ncclFloat, ncclSum, _comms[devIndex], _strms[devIndex]));
+    }
 
 protected:
     ncclComm_t*     _comms;
     cudaStream_t*   _strms;
+    ncclUniqueId    _comm_id;
     int             _ndevs;
     int*            _devcs;
 };
